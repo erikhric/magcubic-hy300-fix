@@ -1,7 +1,37 @@
 # Magcubic HY300 Pro+ — black boot + boot-on-plug
 
 Allwinner H713 projector (SpectraOS / Hotack OEM, `persist.sys.deviceName=HY300 Pro+`).
-Network ADB on port `5555`. No root required.
+No root required.
+
+## Prerequisites
+
+### 1. `adb` on the computer
+
+The scripts call `adb`. Install platform-tools if `adb version` fails:
+
+- macOS: `brew install android-platform-tools`
+- Debian/Ubuntu: `sudo apt install adb`
+- Windows: [platform-tools zip](https://developer.android.com/tools/releases/platform-tools) and put it on `PATH`
+
+### 2. Remote debugging on the projector
+
+The computer and projector must be on the **same LAN**. Then enable **network / wireless ADB** (remote debugging), not only a one-shot USB cable:
+
+1. On the projector: **Settings → Other settings → Developer** (or Android **Settings → Device Preferences → About** and click Build until developer options unlock, then **Developer options**).
+2. Turn on **USB debugging** and **Network debugging** / **Wireless debugging** / **ADB over network**. Allow this computer if a prompt appears.
+3. Note the projector IP (Wi‑Fi status). Port is **`5555`** on these Hotack builds.
+
+Check:
+
+```bash
+adb connect PROJECTOR_IP:5555
+adb devices -l
+# expect:  PROJECTOR_IP:5555    device
+```
+
+`unauthorized` = accept the RSA prompt on the projector. `offline` / cannot connect = debugging still off, wrong IP, or not on the same network.
+
+`scripts/apply.sh` and `scripts/set-power/run.sh` refuse to run if `adb` is missing or the device does not come up as `device`.
 
 ## Symptoms
 
@@ -67,20 +97,12 @@ That is Allwinner TV **power-on mode**, stored in U-Boot env via `tvserver`:
 
 Settings UI writes `factorySetPowerMode` (HIDL `vendor.aw.homlet.tvsystem.tvserver@1.0::ITvServer`, transactions 152 set / 153 get). The activity is not exported, so `am start` from the shell cannot open it.
 
-From a machine with Android `d8` (or use the prebuilt steps in `scripts/set-power/`):
-
-```bash
-# after pushing setpower.dex (see scripts/set-power)
-adb shell CLASSPATH=/data/local/tmp/setpower.dex app_process /data/local/tmp SetPower     # read
-adb shell CLASSPATH=/data/local/tmp/setpower.dex app_process /data/local/tmp SetPower 1   # DIRECT
-```
-
-Or one-shot:
-
 ```bash
 ./scripts/apply.sh PROJECTOR_IP
 ./scripts/set-power/run.sh PROJECTOR_IP 1
 ```
+
+`set-power/run.sh` needs `javac` plus Android SDK `d8` (`ANDROID_HOME`) the first time, to build `setpower.dex`. After that it only needs `adb`.
 
 Then `adb reboot` (or unplug — with DIRECT, the next plug should boot).
 

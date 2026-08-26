@@ -4,6 +4,9 @@
 set -eu
 ip=${1:?usage: $0 PROJECTOR_IP [mode]}
 mode=${2-}
+# shellcheck source=../need-adb.sh
+. "$(dirname "$0")/../need-adb.sh"
+need_adb "$ip"
 cd "$(dirname "$0")"
 if [ ! -f setpower.dex ]; then
   javac --release 8 -d stubs_out stubs/android/os/*.java
@@ -16,7 +19,6 @@ if [ ! -f setpower.dex ]; then
   "$d8" --output . out/SetPower.class
   mv classes.dex setpower.dex
 fi
-adb connect "$ip:5555"
 adb -s "$ip:5555" push setpower.dex /data/local/tmp/setpower.dex >/dev/null
 if [ -n "$mode" ]; then
   adb -s "$ip:5555" shell CLASSPATH=/data/local/tmp/setpower.dex app_process /data/local/tmp SetPower "$mode"

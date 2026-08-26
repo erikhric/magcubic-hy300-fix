@@ -2,7 +2,9 @@
 # Persist HY300 Pro+ black-boot workarounds. Usage: ./apply.sh 192.168.x.x
 set -eu
 ip=${1:?usage: $0 PROJECTOR_IP}
-adb connect "$ip:5555"
+# shellcheck source=need-adb.sh
+. "$(dirname "$0")/need-adb.sh"
+need_adb "$ip"
 s="adb -s $ip:5555"
 
 $s shell setprop persist.sys.bootanim.video_enable 0
