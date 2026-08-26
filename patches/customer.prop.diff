@@ -1,0 +1,8 @@
+--- a/oem/customer.prop
++++ b/oem/customer.prop
+@@ -31,3 +31,6 @@ persist.sys.animation.delay=10
+ # factory-test / setup wizard — not "boot on AC". leave 0.
+ persist.sys.enable.bootup=0
++# static logo only; disable boot video
++persist.sys.bootanim.video_enable=0
++persist.sys.default_source=LOCAL

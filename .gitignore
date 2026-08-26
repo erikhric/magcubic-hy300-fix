@@ -1,0 +1,5 @@
+scripts/set-power/stubs_out/
+scripts/set-power/out/
+scripts/set-power/stubs.jar
+scripts/set-power/*.dex
+.DS_Store
