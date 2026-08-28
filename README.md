@@ -31,7 +31,9 @@ adb devices -l
 
 `unauthorized` = accept the RSA prompt on the projector. `offline` / cannot connect = debugging still off, wrong IP, or not on the same network.
 
-`scripts/apply.sh` and `scripts/set-power/run.sh` refuse to run if `adb` is missing or the device does not come up as `device`.
+`scripts/apply.sh`, `scripts/set-power/run.sh`, `scripts/set-source/run.sh`, and `scripts/restore-bootlogo.sh` refuse to run if `adb` is missing or the device does not come up as `device`.
+
+macOS “Local Network” permission can block `adb` from reaching `PROJECTOR_IP:5555`. A TCP relay on loopback works: `python3 /tmp/adb-relay.py 15555 PROJECTOR_IP 5555`, then pass `127.0.0.1:15555` as the serial to the scripts.
 
 ## Symptoms
 
@@ -39,11 +41,13 @@ adb devices -l
 - A working boot shows a **static Magcubic logo** (not a video), then Android.
 - Holding the power button until the logo appears is a hard reboot of a system that often **already reached userspace**.
 - Boot history looks like clean `shutdown`, not panic. Android was up; the panel stayed black.
+- **No Magcubic logo from the first frame** (lamp already on, wall black) means the kernel splash itself is empty. ADB screenshots can still show the launcher.
 
-Two independent software causes match that:
+Three independent software causes match that:
 
-1. **Classic Allwinner boot-video hang.** `persist.sys.bootanim.video_enable=1` makes `bootanimation` drop the kernel logo, open `MediaPlayer`, and look for `/oem/media/bootvideo.mp4` (and similar paths). This firmware has **no mp4**. You get a black video layer, lamp already on, system_server still running. Sometimes it falls through to the PNG zip (static logo). Sometimes it never gives the layer back.
-2. **Last HDMI input restored** (`input_recovery_record=HDMI1`) with nothing plugged in → black picture, Android still running.
+1. **Black kernel splash.** `/oem/bootlogo.bmp` is a valid 1280×720 24-bit BMP of zeros. U-Boot/kernel puts that on the panel from t=0. The Magcubic mark lives in `/oem/media/bootanimation.zip` (`part0/01.png`) and only appears if bootanimation actually composites. `adb push` **directly onto** `/oem/bootlogo.bmp` fails `fchown` and can **delete** the file; push to `/sdcard` then `cp`.
+2. **Classic Allwinner boot-video hang.** `persist.sys.bootanim.video_enable=1` makes `bootanimation` drop the kernel logo, open `MediaPlayer`, and look for `/oem/media/bootvideo.mp4` (and similar paths). This firmware has **no mp4**. You get a black video layer, lamp already on, system_server still running. Sometimes it falls through to the PNG zip (static logo). Sometimes it never gives the layer back. Do not set `video_enable=1`.
+3. **Panel mux on HDMI decoder.** `tvserver` dump shows `SourceType: kHalSourceID_VideoDec` with no cable → black wall, Android still running (`screencap` is not black). `input_recovery_record=HDMI1` is the settings-level form of this. Live switch: `scripts/set-source/run.sh PROJECTOR_IP image` (`SubDeviceSetSource` HIDL transact 14, Image=2, plus `SubDeviceVpDisableBlackScreen` transact 9).
 
 OEM **Power mode** default is **standby**, so plugging the adapter does nothing until you press power. That is a separate setting.
 
@@ -99,12 +103,15 @@ Settings UI writes `factorySetPowerMode` (HIDL `vendor.aw.homlet.tvsystem.tvserv
 
 ```bash
 ./scripts/apply.sh PROJECTOR_IP
+./scripts/restore-bootlogo.sh PROJECTOR_IP
 ./scripts/set-power/run.sh PROJECTOR_IP 1
+# if the lamp is on and the wall is still HDMI-black (Android already up):
+./scripts/set-source/run.sh PROJECTOR_IP image
 ```
 
-`set-power/run.sh` needs `javac` plus Android SDK `d8` (`ANDROID_HOME`) the first time, to build `setpower.dex`. After that it only needs `adb`.
+`set-power/run.sh` / `set-source/run.sh` need `javac` plus Android SDK `d8` (`ANDROID_HOME`) the first time, to build the dex. After that they only need `adb`. `restore-bootlogo.sh` needs `python3` (stdlib only).
 
-Then `adb reboot` (or unplug — with DIRECT, the next plug should boot).
+Then `adb reboot` (or unplug — with DIRECT, the next plug should boot). The next kernel splash should be the Magcubic mark, not a black frame.
 
 ## What this does *not* fix
 
@@ -121,4 +128,4 @@ adb shell getprop persist.sys.bootanim.video_enable
 adb shell CLASSPATH=/data/local/tmp/setpower.dex app_process /data/local/tmp SetPower
 ```
 
-Kernel logo lives at `/oem/bootlogo.bmp`. OEM bootanimation is a single PNG zip: `/oem/media/bootanimation.zip`. There is no `bootvideo.mp4`.
+Kernel logo lives at `/oem/bootlogo.bmp` (restore from `media/bootlogo.png` via `scripts/restore-bootlogo.sh`). OEM bootanimation is a single PNG zip: `/oem/media/bootanimation.zip`. There is no `bootvideo.mp4`.

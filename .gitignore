@@ -2,4 +2,8 @@ scripts/set-power/stubs_out/
 scripts/set-power/out/
 scripts/set-power/stubs.jar
 scripts/set-power/*.dex
+scripts/set-source/stubs_out/
+scripts/set-source/out/
+scripts/set-source/stubs.jar
+scripts/set-source/*.dex
 .DS_Store
