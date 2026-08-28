@@ -103,9 +103,15 @@ Settings UI writes `factorySetPowerMode` (HIDL `vendor.aw.homlet.tvsystem.tvserv
 
 ```bash
 ./scripts/apply.sh PROJECTOR_IP
+```
+
+That now: restores the Magcubic kernel splash, keeps boot video off + `default_source=LOCAL`, disables `com.softwinner.awlivetv` so Live TV cannot steal the panel at boot, installs a small `BOOT_COMPLETED` helper that sends HOME, and copies `/oem/hy300-local.sh` (HIDL Image + HOME, three times) for init to run when `/oem` is imported.
+
+HDMI later: `adb shell pm enable com.softwinner.awlivetv`.
+
+```bash
 ./scripts/restore-bootlogo.sh PROJECTOR_IP
 ./scripts/set-power/run.sh PROJECTOR_IP 1
-# if the lamp is on and the wall is still HDMI-black (Android already up):
 ./scripts/set-source/run.sh PROJECTOR_IP image
 ```
 

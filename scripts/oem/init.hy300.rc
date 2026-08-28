@@ -1,0 +1,9 @@
+on property:sys.boot_completed=1
+    start hy300local
+
+service hy300local /system/bin/sh /oem/hy300-local.sh
+    class late_start
+    user shell
+    group shell
+    oneshot
+    disabled

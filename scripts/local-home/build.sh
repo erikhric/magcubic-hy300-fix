@@ -1,0 +1,25 @@
+#!/bin/sh
+# Build localhome.apk (BOOT_COMPLETED → Image source + HOME).
+set -eu
+cd "$(dirname "$0")"
+BT=$(ls "$ANDROID_HOME"/build-tools/*/aapt2 2>/dev/null | tail -1)
+BT=$(dirname "$BT")
+AJ=$(ls "$ANDROID_HOME"/platforms/android-*/android.jar | tail -1)
+[ -n "$BT" ] && [ -n "$AJ" ] || { echo "need ANDROID_HOME build-tools + platforms"; exit 1; }
+rm -rf out gen classes.dex
+mkdir -p out gen
+"$BT/aapt2" link -o out/unsigned.apk --manifest AndroidManifest.xml -I "$AJ" \
+  --min-sdk-version 26 --target-sdk-version 30 --version-code 1 --version-name 1
+# HwBinder is hidden; compile against set-power stubs + android.jar
+mkdir -p stubs_out
+javac --release 8 -d stubs_out ../set-power/stubs/android/os/*.java
+jar cf out/hidl-stubs.jar -C stubs_out .
+javac --release 8 -cp "out/hidl-stubs.jar:$AJ" -d out BootReceiver.java
+"$BT/d8" --min-api 26 --lib "$AJ" --output . out/com/hy300/localhome/*.class
+# aapt2 unsigned apk is a zip; inject dex
+zip -j out/unsigned.apk classes.dex >/dev/null
+"$BT/zipalign" -f 4 out/unsigned.apk out/aligned.apk
+"$BT/apksigner" sign --ks "$HOME/.android/debug.keystore" --ks-pass pass:android \
+  --key-pass pass:android --out localhome.apk out/aligned.apk
+rm -f classes.dex
+echo "built $PWD/localhome.apk"

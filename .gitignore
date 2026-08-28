@@ -6,4 +6,9 @@ scripts/set-source/stubs_out/
 scripts/set-source/out/
 scripts/set-source/stubs.jar
 scripts/set-source/*.dex
+scripts/local-home/out/
+scripts/local-home/gen/
+scripts/local-home/classes.dex
+scripts/local-home/stubs_out/
+scripts/local-home/*.idsig
 .DS_Store

@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    package="com.hy300.localhome"
+    android:versionCode="1"
+    android:versionName="1">
+  <uses-sdk android:minSdkVersion="26" android:targetSdkVersion="30"/>
+  <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED"/>
+  <uses-feature android:name="android.software.leanback" android:required="false"/>
+  <uses-feature android:name="android.hardware.touchscreen" android:required="false"/>
+  <application android:label="HY300 local home" android:allowBackup="false" android:directBootAware="true">
+    <receiver android:name=".BootReceiver" android:exported="true" android:directBootAware="true">
+      <intent-filter>
+        <action android:name="android.intent.action.BOOT_COMPLETED"/>
+        <action android:name="android.intent.action.LOCKED_BOOT_COMPLETED"/>
+        <action android:name="android.intent.action.USER_UNLOCKED"/>
+      </intent-filter>
+    </receiver>
+    <activity android:name=".BootReceiver$GoActivity"
+        android:exported="true"
+        android:excludeFromRecents="true"
+        android:theme="@android:style/Theme.NoDisplay">
+      <intent-filter>
+        <action android:name="android.intent.action.MAIN"/>
+        <category android:name="android.intent.category.LAUNCHER"/>
+        <category android:name="android.intent.category.LEANBACK_LAUNCHER"/>
+      </intent-filter>
+    </activity>
+  </application>
+</manifest>
