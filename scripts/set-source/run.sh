@@ -1,6 +1,6 @@
 #!/bin/sh
-# Read/set Allwinner panel source. Usage: ./run.sh PROJECTOR_IP [image|set N|unblack]
-# 2=Image (LOCAL/Android)  1=VideoDec (HDMI decoder, black if no cable)
+# Read/set Allwinner panel mux. Usage: ./run.sh PROJECTOR_IP [image|set N|unblack|uncover|vpinit|dump]
+# image/local = drop HDMI video plane (this firmware maps SetSource 1/2/3 to HDMI, not Android).
 set -eu
 ip=${1:?usage: $0 PROJECTOR_IP_OR_SERIAL [image|set N|unblack]}
 shift

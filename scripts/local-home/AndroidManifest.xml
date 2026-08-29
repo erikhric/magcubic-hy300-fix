@@ -15,7 +15,7 @@
         <action android:name="android.intent.action.USER_UNLOCKED"/>
       </intent-filter>
     </receiver>
-    <activity android:name=".BootReceiver$GoActivity"
+    <activity android:name=".GoActivity"
         android:exported="true"
         android:excludeFromRecents="true"
         android:theme="@android:style/Theme.NoDisplay">

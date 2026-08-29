@@ -14,7 +14,7 @@ mkdir -p out gen
 mkdir -p stubs_out
 javac --release 8 -d stubs_out ../set-power/stubs/android/os/*.java
 jar cf out/hidl-stubs.jar -C stubs_out .
-javac --release 8 -cp "out/hidl-stubs.jar:$AJ" -d out BootReceiver.java
+javac --release 8 -cp "out/hidl-stubs.jar:$AJ" -d out BootReceiver.java GoActivity.java
 "$BT/d8" --min-api 26 --lib "$AJ" --output . out/com/hy300/localhome/*.class
 # aapt2 unsigned apk is a zip; inject dex
 zip -j out/unsigned.apk classes.dex >/dev/null

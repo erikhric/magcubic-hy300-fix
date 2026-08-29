@@ -32,6 +32,7 @@ $s push "$root/scripts/set-source/setsource.dex" /sdcard/setsource.dex >/dev/nul
 $s shell 'cp /sdcard/setsource.dex /oem/setsource.dex; rm /sdcard/setsource.dex'
 $s push "$root/scripts/oem/hy300-local.sh" /sdcard/hy300-local.sh >/dev/null
 $s shell 'cp /sdcard/hy300-local.sh /oem/hy300-local.sh; chmod 755 /oem/hy300-local.sh; rm /sdcard/hy300-local.sh'
+# This unit's vendor init does not import /oem; localhome + disable-user is the persist path.
 $s push "$root/scripts/oem/init.hy300.rc" /sdcard/init.hy300.rc >/dev/null
 $s shell 'cp /sdcard/init.hy300.rc /oem/init.hy300.rc; rm /sdcard/init.hy300.rc'
 # If vendor already imports an oem rc, append our trigger once.
@@ -41,15 +42,17 @@ if $s shell grep -q 'import /oem/' /vendor/etc/init/*.rc /system/etc/init/*.rc 2
   fi
 fi
 
-# Do not let Live TV steal the panel at boot. Re-enable with: pm enable com.softwinner.awlivetv
+# Do not let Live TV / factory test steal the panel at boot.
+# HDMI later: pm enable com.softwinner.awlivetv
 $s shell pm disable-user --user 0 com.softwinner.awlivetv >/dev/null || true
+$s shell pm disable-user --user 0 com.htc.hyk_test >/dev/null || true
 
 $s shell 'cmd package set-home-activity com.spocky.projengmenu/.ui.home.MainActivity' >/dev/null || true
 
 if [ -f "$root/scripts/local-home/localhome.apk" ]; then
   $s install -r "$root/scripts/local-home/localhome.apk" >/dev/null
   # Android 8+ will not deliver BOOT_COMPLETED until the app has been launched once.
-  $s shell am start -n com.hy300.localhome/.BootReceiver\$GoActivity >/dev/null || true
+  $s shell am start -n com.hy300.localhome/.GoActivity >/dev/null || true
 fi
 
 # Live switch now (Image + unblack + HOME)

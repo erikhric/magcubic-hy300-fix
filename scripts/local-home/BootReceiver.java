@@ -1,6 +1,5 @@
 package com.hy300.localhome;
 
-import android.app.Activity;
 import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
@@ -20,8 +19,11 @@ public class BootReceiver extends BroadcastReceiver {
     static void go(Context ctx) {
         try {
             IHwBinder binder = HwBinder.getService(IFACE, "default");
-            set(binder, 2);
+            // ponytail: SetSource(2) is HDMI2 on this firmware; drop the video plane instead
+            tx(binder, 5);
             unblack(binder);
+            uncover(binder, 0);
+            uncover(binder, 1);
         } catch (Throwable ignored) {
             // ponytail: HIDL may be hidden-API blocked for this uid; oem shell script is the real switch
         }
@@ -34,12 +36,11 @@ public class BootReceiver extends BroadcastReceiver {
         }
     }
 
-    static int set(IHwBinder binder, int src) throws Exception {
+    static int tx(IHwBinder binder, int code) throws Exception {
         HwParcel req = new HwParcel();
         HwParcel resp = new HwParcel();
         req.writeInterfaceToken(IFACE);
-        req.writeInt32(src);
-        binder.transact(14, req, resp, 0);
+        binder.transact(code, req, resp, 0);
         resp.verifySuccess();
         req.releaseTemporaryStorage();
         try {
@@ -63,12 +64,18 @@ public class BootReceiver extends BroadcastReceiver {
         }
     }
 
-    public static class GoActivity extends Activity {
-        @Override
-        protected void onCreate(android.os.Bundle b) {
-            super.onCreate(b);
-            BootReceiver.go(this);
-            finish();
+    static int uncover(IHwBinder binder, int id) throws Exception {
+        HwParcel req = new HwParcel();
+        HwParcel resp = new HwParcel();
+        req.writeInterfaceToken(IFACE);
+        req.writeInt32(id);
+        binder.transact(11, req, resp, 0);
+        resp.verifySuccess();
+        req.releaseTemporaryStorage();
+        try {
+            return resp.readInt32();
+        } finally {
+            resp.release();
         }
     }
 }
