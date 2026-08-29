@@ -1,4 +1,5 @@
 import android.os.HwBinder;
+import android.os.HwBlob;
 import android.os.HwParcel;
 import android.os.IHwBinder;
 
@@ -9,6 +10,8 @@ public class SetSource {
         "Dummy", "VideoDec", "Image", "HDMI_1", "HDMI_2", "HDMI_3", "HDMI_4",
         "CVBS_1", "CVBS_2", "CVBS_3", "ATV", "DTV", "Max"
     };
+    static final int TX_SVPSTART = 2;
+    static final int TX_SVPSTOP = 3;
     static final int TX_VPINIT = 4;
     static final int TX_VPDEINIT = 5;
     static final int TX_UNBLACK = 9;
@@ -17,6 +20,7 @@ public class SetSource {
     static final int TX_SET = 14;
     static final int TX_GET = 16;
     static final int TX_HDMI_PORT = 18;
+    static final int TX_VPWINDOW = 20;
     // This firmware's SourceLoadConfig maps 1=HDMI1, 2=HDMI2 — not TvSourceID.Image.
     // LOCAL is the Android plane: tear down the HDMI video plane, do not SetSource(2).
 
@@ -129,9 +133,35 @@ public class SetSource {
         }
     }
 
+    static void writeWin(HwParcel req, int hs, int hz, int vs, int vz) {
+        HwBlob blob = new HwBlob(16);
+        blob.putInt32(0, hs);
+        blob.putInt32(4, hz);
+        blob.putInt32(8, vs);
+        blob.putInt32(12, vz);
+        req.writeBuffer(blob);
+    }
+
+    static int setVpWindow(IHwBinder binder) throws Exception {
+        HwParcel req = new HwParcel();
+        HwParcel resp = new HwParcel();
+        req.writeInterfaceToken(IFACE);
+        writeWin(req, 0, 0, 0, 0);
+        writeWin(req, 0, 0, 0, 0);
+        req.writeInt32(0);
+        binder.transact(TX_VPWINDOW, req, resp, 0);
+        resp.verifySuccess();
+        req.releaseTemporaryStorage();
+        try {
+            return resp.readInt32();
+        } finally {
+            resp.release();
+        }
+    }
+
     static void showAndroid(IHwBinder binder) throws Exception {
-        // ponytail: SetSource(2) is HDMI2 on this unit. Video plane off = LOCAL.
-        System.out.println("vpdeinit rc=" + tx(binder, TX_VPDEINIT));
+        // Do not DeviceSvpStop (transact 3): it hangs tvserver/app_process.
+        // Do not SetSource(2): this firmware maps 2 to HDMI2.
         System.out.println("unblack rc=" + unblack(binder));
         System.out.println("uncover0 rc=" + uncover(binder, 0));
         System.out.println("uncover1 rc=" + uncover(binder, 1));
@@ -158,8 +188,10 @@ public class SetSource {
         } else if (cmd.equals("uncover")) {
             System.out.println("uncover0 rc=" + uncover(binder, 0));
             System.out.println("uncover1 rc=" + uncover(binder, 1));
-        } else if (cmd.equals("vpinit")) {
-            System.out.println("vpinit rc=" + tx(binder, TX_VPINIT));
+        } else if (cmd.equals("svpstop")) {
+            System.out.println("svpstop rc=" + tx(binder, TX_SVPSTOP));
+        } else if (cmd.equals("svpstart")) {
+            System.out.println("svpstart rc=" + tx(binder, TX_SVPSTART));
         } else if (cmd.equals("dump")) {
             dump(binder);
             return;
