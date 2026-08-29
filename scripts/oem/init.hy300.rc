@@ -1,3 +1,5 @@
+# Best-effort: this unit's vendor init does not import /oem.
+# Service only sends HOME. Do not call SetSource / svpstop here (hangs AV-MIPS).
 on property:sys.boot_completed=1
     start hy300local
 

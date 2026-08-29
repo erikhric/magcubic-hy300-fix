@@ -19,9 +19,12 @@ need_adb() {
   esac
   adb connect "$ADB_SERIAL" >/dev/null
   state=$(adb -s "$ADB_SERIAL" get-state 2>/dev/null || true)
-  if [ "$state" != device ]; then
+    if [ "$state" != device ]; then
     echo "adb cannot talk to $ADB_SERIAL (state=${state:-unreachable})." >&2
     echo "Same Wi-Fi? Remote debugging on? RSA prompt allowed?  Try: adb connect $ADB_SERIAL && adb devices -l" >&2
+    if [ "$state" = offline ]; then
+      echo "offline after a HIDL setter hang: adb kill-server, reconnect. Do not setprop sys.powerctl shutdown." >&2
+    fi
     exit 1
   fi
   ADB_SH="adb -s $ADB_SERIAL shell"

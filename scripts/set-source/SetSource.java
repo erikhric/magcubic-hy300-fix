@@ -1,9 +1,20 @@
 import android.os.HwBinder;
-import android.os.HwBlob;
 import android.os.HwParcel;
 import android.os.IHwBinder;
 
-/** Switch Allwinner tvserver panel source. Image=LOCAL framebuffer; VideoDec=HDMI decoder (black if unplugged). */
+/**
+ * HIDL helper for vendor.aw.homlet.tvsystem.tvserver@1.0::ITvServer/default.
+ *
+ * TvSourceID: Dummy=0 LOCAL, VideoDec=1, Image=2, HDMI_1=3, HDMI_2=4, HDMI_3=5.
+ * Dummy is LOCAL in HAL logs (SubDeviceSetSource → kHalSourceID_Dummy).
+ * GetSource on a GOOD boot still returns VideoDec=1 — that is normal; the
+ * picture is mixed on AV-MIPS, not an HDMI overlay we turned off.
+ * Dummy SetSource / DeviceSvpStop / DeviceSvpStart hang when sys.svp_status=0
+ * (MIPS stalled). Unplug ~10s; do not adb reboot. apply.sh never calls those.
+ *
+ * Transact: SvpStart=2, SvpStop=3, VpDeInit=5, Unblack=9, Uncover=11,
+ * LoadConfig=12, SetSource=14, GetSource=16, HdmiPort=18.
+ */
 public class SetSource {
     static final String IFACE = "vendor.aw.homlet.tvsystem.tvserver@1.0::ITvServer";
     static final String[] NAMES = {
@@ -12,17 +23,14 @@ public class SetSource {
     };
     static final int TX_SVPSTART = 2;
     static final int TX_SVPSTOP = 3;
-    static final int TX_VPINIT = 4;
-    static final int TX_VPDEINIT = 5;
     static final int TX_UNBLACK = 9;
     static final int TX_UNCOVER = 11;
     static final int TX_LOADCFG = 12;
     static final int TX_SET = 14;
     static final int TX_GET = 16;
     static final int TX_HDMI_PORT = 18;
-    static final int TX_VPWINDOW = 20;
-    // This firmware's SourceLoadConfig maps 1=HDMI1, 2=HDMI2 — not TvSourceID.Image.
-    // LOCAL is the Android plane: tear down the HDMI video plane, do not SetSource(2).
+    // SourceLoadConfig / portmap.cfg: TIF 1/2/3 → HDMI1/2/3, not TvSourceID.Image.
+    // SetSource(2) is HDMI2 on this firmware, not LOCAL. Dummy=0 is LOCAL and hangs if MIPS is down.
 
     static String name(int id) {
         return (id >= 0 && id < NAMES.length) ? NAMES[id] : ("id:" + id);
@@ -117,6 +125,8 @@ public class SetSource {
     static void dump(IHwBinder binder) throws Exception {
         System.out.println("cfg=" + loadCfg(binder));
         System.out.println("hdmiPort=" + hdmiPort(binder));
+        System.out.println("note: VideoDec on a good boot is normal; HDMI overlay is not disabled.");
+        System.out.println("note: svp_status=0 → unplug 10s. do not set dummy / svpstop.");
     }
 
     static int tx(IHwBinder binder, int code) throws Exception {
@@ -133,34 +143,9 @@ public class SetSource {
         }
     }
 
-    static void writeWin(HwParcel req, int hs, int hz, int vs, int vz) {
-        HwBlob blob = new HwBlob(16);
-        blob.putInt32(0, hs);
-        blob.putInt32(4, hz);
-        blob.putInt32(8, vs);
-        blob.putInt32(12, vz);
-        req.writeBuffer(blob);
-    }
-
-    static int setVpWindow(IHwBinder binder) throws Exception {
-        HwParcel req = new HwParcel();
-        HwParcel resp = new HwParcel();
-        req.writeInterfaceToken(IFACE);
-        writeWin(req, 0, 0, 0, 0);
-        writeWin(req, 0, 0, 0, 0);
-        req.writeInt32(0);
-        binder.transact(TX_VPWINDOW, req, resp, 0);
-        resp.verifySuccess();
-        req.releaseTemporaryStorage();
-        try {
-            return resp.readInt32();
-        } finally {
-            resp.release();
-        }
-    }
-
     static void showAndroid(IHwBinder binder) throws Exception {
-        // Do not DeviceSvpStop (transact 3): it hangs tvserver/app_process.
+        // Unblack + Uncover only. Does not switch the mux and does not disable HDMI.
+        // Do not DeviceSvpStop (transact 3): hangs tvserver if AV-MIPS is stalled.
         // Do not SetSource(2): this firmware maps 2 to HDMI2.
         System.out.println("unblack rc=" + unblack(binder));
         System.out.println("uncover0 rc=" + uncover(binder, 0));
@@ -177,10 +162,16 @@ public class SetSource {
         }
 
         String cmd = args[0];
-        if (cmd.equals("image") || cmd.equals("local")) {
+        if (cmd.equals("dump") || cmd.equals("get")) {
+            if (cmd.equals("dump")) dump(binder);
+            return;
+        } else if (cmd.equals("image") || cmd.equals("local")) {
             showAndroid(binder);
         } else if (cmd.equals("set")) {
             int src = Integer.parseInt(args[1]);
+            if (src == 0) {
+                System.err.println("warn: Dummy=0 is LOCAL; RPC hangs if sys.svp_status=0. Unplug, do not adb reboot.");
+            }
             int rc = set(binder, src);
             System.out.println("set " + src + " (" + name(src) + ") rc=" + rc);
         } else if (cmd.equals("unblack")) {
@@ -189,14 +180,14 @@ public class SetSource {
             System.out.println("uncover0 rc=" + uncover(binder, 0));
             System.out.println("uncover1 rc=" + uncover(binder, 1));
         } else if (cmd.equals("svpstop")) {
+            System.err.println("warn: DeviceSvpStop hangs tvserver if sys.svp_status=0.");
             System.out.println("svpstop rc=" + tx(binder, TX_SVPSTOP));
         } else if (cmd.equals("svpstart")) {
+            System.err.println("warn: DeviceSvpStart hangs tvserver if sys.svp_status=0.");
             System.out.println("svpstart rc=" + tx(binder, TX_SVPSTART));
-        } else if (cmd.equals("dump")) {
-            dump(binder);
-            return;
         } else {
-            System.err.println("usage: SetSource [image|set <id>|unblack|uncover|vpinit|dump]");
+            System.err.println("usage: SetSource dump | get | image | local | set <id> | unblack | uncover | svpstop | svpstart");
+            System.err.println("  dump/get are safe. set 0 / svpstop hang if sys.svp_status=0. apply.sh never calls those.");
             System.exit(1);
         }
         int now = get(binder);

@@ -1,5 +1,8 @@
 #!/usr/bin/env python3
-"""PNG (8-bit RGB) -> Allwinner /oem/bootlogo.bmp (Windows 3.x 24-bit, bottom-up BGR)."""
+"""PNG (8-bit RGB) -> Allwinner /oem/bootlogo.bmp (Windows 3.x 24-bit, bottom-up BGR).
+
+Splash only. A zeros BMP blacks the lamp from t=0; restoring art does not reset AV-MIPS.
+"""
 import struct
 import sys
 import zlib

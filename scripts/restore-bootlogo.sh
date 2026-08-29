@@ -1,6 +1,7 @@
 #!/bin/sh
 # Restore Magcubic kernel splash. /oem/bootlogo.bmp was a valid 1280x720 BMP of zeros —
 # lamp on, no logo from t=0. Do not adb-push onto /oem (fchown deletes the file).
+# Splash only: does not reset a stalled AV-MIPS mixer (sys.svp_status=0 → unplug 10s).
 set -eu
 ip=${1:?usage: $0 PROJECTOR_IP_OR_SERIAL}
 # shellcheck source=need-adb.sh

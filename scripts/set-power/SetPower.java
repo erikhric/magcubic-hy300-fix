@@ -2,6 +2,7 @@ import android.os.HwBinder;
 import android.os.HwParcel;
 import android.os.IHwBinder;
 
+/** factorySetPowerMode: 0=STANDBY 1=DIRECT (boot on plug) 2=MEMORY. Not the HDMI/LOCAL mux. */
 public class SetPower {
     static final String IFACE = "vendor.aw.homlet.tvsystem.tvserver@1.0::ITvServer";
     static final String[] MODES = {"STANDBY", "DIRECT", "MEMORY"};

@@ -1,6 +1,8 @@
 #!/bin/sh
 # Read/set Allwinner power-on mode. Usage: ./run.sh PROJECTOR_IP [0|1|2]
 # 0=STANDBY  1=DIRECT (boot on plug)  2=MEMORY
+# DIRECT is "boot when AC is applied", not a picture-mux off switch.
+# A software reboot / this HIDL call does not reset a stalled AV-MIPS mixer.
 set -eu
 ip=${1:?usage: $0 PROJECTOR_IP_OR_SERIAL [mode]}
 mode=${2-}
