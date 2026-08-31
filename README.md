@@ -92,8 +92,9 @@ adb connect PROJECTOR_IP:5555
 - restores the Magcubic kernel splash
 - keeps boot video off and `persist.sys.default_source=LOCAL`
 - `pm disable-user` on `com.softwinner.awlivetv` and factory `com.htc.hyk_test`
-- sets Projectivy as HOME and installs `com.hy300.localhome` (BOOT_COMPLETED → HOME)
+- sets Projectivy as HOME
 - copies `/oem/hy300-local.sh` in case some build imports `/oem` (this unit’s vendor init **does not**)
+- uninstalls `com.hy300.localhome` if present (v1 showed **HY300 local home** on the launcher; opening it called tvserver HIDL and froze the box)
 
 It does **not** call `SetSource` Dummy / Image-as-HDMI2 / `svpstop` (those hang MIPS). After apply, if the wall is still black, unplug — do not `adb reboot`.
 
@@ -109,7 +110,7 @@ HDMI later: `adb shell pm enable com.softwinner.awlivetv`.
 | `scripts/set-power/run.sh` | `factorySetPowerMode` DIRECT=1 (boot on plug). Does not reset MIPS. |
 | `scripts/set-source/run.sh` | HIDL helper. Refuses `set` / `svpstop` / `svpstart` when `svp_status=0`. |
 | `scripts/oem/hy300-local.sh` | HOME loop if vendor ever imports `/oem` (this unit does not). No HIDL. |
-| `scripts/local-home/` | `BOOT_COMPLETED` → HOME. No tvserver calls. |
+| `scripts/local-home/` | Not installed. v1 launcher icon froze the box; `apply.sh` uninstalls it. |
 
 Do not run `set-source` setters, `loadmips`, or `svp-suspend` on a black lamp. Those hang `tvserver` (`Slave is not ready`) and can take ADB `offline`. Recover with `adb kill-server` and reconnect; do not `setprop sys.powerctl shutdown`.
 
